@@ -1,0 +1,80 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: eduflow-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "EduFlow@123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "EduFlow@123" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: eduflow-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: eduflow
+      RABBITMQ_DEFAULT_PASS: eduflow_secret
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: eduflow-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=EduFlow@123;TrustServerCertificate=True"
+      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=EduFlow@123;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+    ports:
+      - "8080:8080"
+
+  workers:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.workers
+    container_name: eduflow-workers
+    depends_on:
+      - api
+      - rabbitmq
+      - sqlserver
+    environment:
+      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=EduFlow@123;TrustServerCertificate=True"
+      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=EduFlow@123;TrustServerCertificate=True"
+      RabbitMq__Host: rabbitmq
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: eduflow-web
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+
+volumes:
+  sql_data:

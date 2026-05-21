@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "EduFlow.Workers": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5055",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

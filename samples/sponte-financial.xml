@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exemplo real de payload Sponte → normalizado para debtAmount -->
+<Titulo>
+  <TituloID>88421</TituloID>
+  <CodigoMatricula>MAT-2024-0042</CodigoMatricula>
+  <UnidadeID>11111111-1111-1111-1111-111111111111</UnidadeID>
+  <ValorDevedor>1250.00</ValorDevedor>
+  <ValorPago>0</ValorPago>
+  <Situacao>Vencido</Situacao>
+  <DataVencimento>2025-04-10</DataVencimento>
+</Titulo>

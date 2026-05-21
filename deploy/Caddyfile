@@ -1,0 +1,10 @@
+# API_DOMAIN vazio → HTTP na porta 80 (IP público da VM).
+# API_DOMAIN=api.seudominio.com + ACME_EMAIL → HTTPS automático (Let's Encrypt).
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN:":80"} {
+	reverse_proxy {$API_UPSTREAM:api:8080}
+}

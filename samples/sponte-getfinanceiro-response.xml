@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfWsFinanceiro xmlns="http://api.sponteeducacional.net.br/">
+  <wsFinanceiro>
+    <CodigoUnidade>UN-RJ</CodigoUnidade>
+    <ContaReceberID>88421</ContaReceberID>
+    <NumeroContrato>CNT-42</NumeroContrato>
+    <Categoria>Mensalidade</Categoria>
+    <TipoPlano>Plano padrão</TipoPlano>
+    <Aluno>
+      <wsInfoAluno>
+        <AlunoID>10042</AlunoID>
+        <NumeroMatricula>MAT-2024-0042</NumeroMatricula>
+      </wsInfoAluno>
+    </Aluno>
+    <Parcelas>
+      <wsParcela>
+        <ContaReceberID>88421</ContaReceberID>
+        <NumeroParcela>1</NumeroParcela>
+        <SituacaoParcela>Vencida</SituacaoParcela>
+        <ValorParcela>1250.00</ValorParcela>
+        <ValorPago>0</ValorPago>
+        <Vencimento>2025-04-10</Vencimento>
+        <Categoria>Mensalidade</Categoria>
+        <FormaCobranca>Boleto</FormaCobranca>
+        <AlunoID>10042</AlunoID>
+      </wsParcela>
+    </Parcelas>
+  </wsFinanceiro>
+</ArrayOfWsFinanceiro>

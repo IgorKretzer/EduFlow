@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 214 32% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 214 95% 96%;
+    --accent-foreground: 221 83% 40%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 14%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 98%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 217 91% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  :root body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(221 83% 53% / 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(160 84% 39% / 0.05), transparent);
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(217 91% 60% / 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(160 84% 39% / 0.06), transparent);
+  }
+}
+
+@layer utilities {
+  .text-gradient-brand {
+    @apply bg-gradient-to-r from-brand-600 to-emerald-600 bg-clip-text text-transparent;
+  }
+
+  .dark .text-gradient-brand {
+    @apply from-sky-400 to-emerald-400;
+  }
+
+  .glass-panel {
+    @apply border border-border/60 bg-card/80 shadow-card backdrop-blur-md;
+  }
+
+  .dark .glass-panel {
+    @apply bg-card/50;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 24px hsl(221 83% 53% / 0.12);
+  }
+
+  .dark .glow-primary {
+    box-shadow: 0 0 24px hsl(217 91% 60% / 0.15);
+  }
+
+  .command-center {
+    @apply relative rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-card md:p-8;
+  }
+
+  .bento-grid {
+    @apply grid w-full gap-4 md:gap-5;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .analytics-page {
+    @apply border-l-4 border-primary/30 pl-1 md:pl-2;
+  }
+
+  .analytics-page-financeiro {
+    @apply border-l-amber-500/50;
+  }
+
+  .analytics-page-retencao {
+    @apply border-l-emerald-500/50;
+  }
+
+  .analytics-page-evasao {
+    @apply border-l-rose-500/50;
+  }
+}

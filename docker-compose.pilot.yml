@@ -1,0 +1,104 @@
+# Stack de produção beta 1.0.0 (Vercel + Oracle): API + SQL + Rabbit + Workers + Caddy.
+# Uso: docker compose -f docker-compose.pilot.yml --env-file deploy/.env.production up -d
+name: eduflow-pilot
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: eduflow-pilot-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD em deploy/.env.pilot}"
+    volumes:
+      - pilot_sql_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: eduflow-pilot-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-eduflow}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD}"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: eduflow-pilot-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - deploy/.env.pilot
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+      ErpConnectors__AllowDemoFallback: "false"
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  workers:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.workers
+    container_name: eduflow-pilot-workers
+    depends_on:
+      api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_healthy
+    env_file:
+      - deploy/.env.pilot
+    environment:
+      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: eduflow-pilot-caddy
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_UPSTREAM: api:8080
+      ACME_EMAIL: "${ACME_EMAIL:-}"
+      API_DOMAIN: "${API_DOMAIN:-}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - pilot_caddy_data:/data
+      - pilot_caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  pilot_sql_data:
+  pilot_caddy_data:
+  pilot_caddy_config:
