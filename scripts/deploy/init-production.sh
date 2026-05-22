@@ -25,13 +25,29 @@ if [ "${ErpConnectors__AllowDemoFallback:-true}" != "false" ]; then
   echo "AVISO: Defina ErpConnectors__AllowDemoFallback=false para dados reais do Sponte."
 fi
 
+export EDUFLOW_ENV_FILE
 COMPOSE="docker compose -f docker-compose.pilot.yml --env-file $EDUFLOW_ENV_FILE"
 
 echo "=== EduFlow 1.0.0-beta — produção ==="
 
-$COMPOSE up -d sqlserver rabbitmq
-
-EDUFLOW_ENV_FILE="$EDUFLOW_ENV_FILE" bash scripts/deploy/apply-sql.sh
+SQL_TARGET="${EDUFLOW_SQL_TARGET:-azure}"
+if [ "$SQL_TARGET" = "azure" ]; then
+  echo "Banco: Azure SQL (sem container sqlserver na VM)"
+  docker compose -f docker-compose.pilot.yml --env-file "$EDUFLOW_ENV_FILE" stop sqlserver 2>/dev/null || true
+  $COMPOSE up -d rabbitmq
+  EDUFLOW_ENV_FILE="$EDUFLOW_ENV_FILE" bash scripts/deploy/apply-sql-azure.sh
+elif [ "$SQL_TARGET" = "local-sql" ]; then
+  if [ -z "${MSSQL_SA_PASSWORD:-}" ] || [ "${MSSQL_SA_PASSWORD}" = "local-sql-not-used" ]; then
+    echo "Defina MSSQL_SA_PASSWORD em $EDUFLOW_ENV_FILE para EDUFLOW_SQL_TARGET=local-sql"
+    exit 1
+  fi
+  echo "Banco: SQL Server em container (exige VM >= 2 GB RAM)"
+  $COMPOSE --profile local-sql up -d sqlserver rabbitmq
+  EDUFLOW_ENV_FILE="$EDUFLOW_ENV_FILE" bash scripts/deploy/apply-sql.sh
+else
+  echo "EDUFLOW_SQL_TARGET inválido: $SQL_TARGET (use azure ou local-sql)"
+  exit 1
+fi
 
 echo "Schema staging (EF)..."
 $COMPOSE build api
@@ -57,4 +73,4 @@ fi
 
 echo ""
 echo "Próximo passo: ./scripts/deploy/create-tenant.sh (se ainda não há escola)"
-echo "Documentação: docs/PRODUCAO-BETA.md"
+echo "Documentação: deploy/AZURE-SQL-ORACLE.md (Azure SQL + Oracle)"

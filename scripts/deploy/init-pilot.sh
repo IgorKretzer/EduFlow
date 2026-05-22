@@ -22,7 +22,7 @@ echo "=== EduFlow — init piloto ==="
 echo "1) Subindo SQL + RabbitMQ..."
 COMPOSE="docker compose -f docker-compose.pilot.yml --env-file $EDUFLOW_ENV_FILE"
 
-$COMPOSE up -d sqlserver rabbitmq
+$COMPOSE --profile local-sql up -d sqlserver rabbitmq
 
 EDUFLOW_ENV_FILE="$EDUFLOW_ENV_FILE" bash scripts/deploy/apply-sql.sh
 

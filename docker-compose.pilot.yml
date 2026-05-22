@@ -4,11 +4,15 @@ name: eduflow-pilot
 
 services:
   sqlserver:
+    profiles: ["local-sql"]
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: eduflow-pilot-sql
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD em deploy/.env.pilot}"
+      # Só com profile local-sql; com Azure deixe vazio ou qualquer placeholder no .env
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-local-sql-not-used}"
+      # SQL Server 2022 exige ≥2 GB RAM na máquina (swap não conta). E2.1.Micro 1 GB não sobe.
+      MSSQL_MEMORY_LIMIT_MB: "${MSSQL_MEMORY_LIMIT_MB:-1536}"
     volumes:
       - pilot_sql_data:/var/opt/mssql
     healthcheck:
@@ -39,15 +43,16 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+        required: false
       rabbitmq:
         condition: service_healthy
     env_file:
-      - deploy/.env.pilot
+      - ${EDUFLOW_ENV_FILE:-deploy/.env.production}
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
+      ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
@@ -69,11 +74,12 @@ services:
         condition: service_healthy
       sqlserver:
         condition: service_healthy
+        required: false
     env_file:
-      - deploy/.env.pilot
+      - ${EDUFLOW_ENV_FILE:-deploy/.env.production}
     environment:
-      ConnectionStrings__Staging: "Server=sqlserver,1433;Database=EduFlow_Staging;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-      ConnectionStrings__Warehouse: "Server=sqlserver,1433;Database=EduFlow_DW;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
+      ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"

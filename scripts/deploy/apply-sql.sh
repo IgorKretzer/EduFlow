@@ -31,14 +31,20 @@ run_sql() {
 
 echo "=== EduFlow — aplicar SQL (piloto) ==="
 
-for i in $(seq 1 60); do
+echo "Aguardando SQL Server (VM pequena: pode levar 5–10 min na 1ª vez)..."
+for i in $(seq 1 150); do
   if docker exec "$CONTAINER" /opt/mssql-tools18/bin/sqlcmd \
     -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
+    echo "SQL Server pronto (${i} tentativas)."
     break
   fi
-  sleep 2
-  if [ "$i" -eq 60 ]; then
-    echo "SQL Server não respondeu."
+  if (( i % 15 == 0 )); then
+    echo "  ... ainda iniciando ($i/150) — docker logs $CONTAINER --tail 5"
+    docker logs "$CONTAINER" --tail 5 2>/dev/null || true
+  fi
+  sleep 3
+  if [ "$i" -eq 150 ]; then
+    echo "SQL Server não respondeu. Rode: docker logs $CONTAINER --tail 80"
     exit 1
   fi
 done
