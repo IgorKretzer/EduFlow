@@ -53,6 +53,10 @@ echo "Schema staging (EF)..."
 $COMPOSE build api
 $COMPOSE run --rm -e EDUFLOW_INIT_SCHEMA=true -e ASPNETCORE_ENVIRONMENT=Development api
 
+if [ "$SQL_TARGET" = "azure" ]; then
+  EDUFLOW_ENV_FILE="$EDUFLOW_ENV_FILE" bash scripts/deploy/apply-sql-staging-post-ef.sh
+fi
+
 $COMPOSE up -d api workers caddy
 
 API_BASE="${PILOT_API_URL:-}"

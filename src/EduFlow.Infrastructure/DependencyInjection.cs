@@ -16,6 +16,7 @@ using EduFlow.Infrastructure.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
 
 namespace EduFlow.Infrastructure;
 
@@ -46,7 +47,11 @@ public static class DependencyInjection
         services.AddSingleton<IDwConnectionFactory>(_ =>
             new DwConnectionFactory(configuration.GetConnectionString("Warehouse")!));
 
-        services.AddDataProtection();
+        var dataProtection = services.AddDataProtection();
+        var dataProtectionKeysPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDashboardService, DashboardService>();

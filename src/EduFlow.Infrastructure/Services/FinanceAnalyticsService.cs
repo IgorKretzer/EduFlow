@@ -191,7 +191,10 @@ public sealed class FinanceAnalyticsService : IFinanceAnalyticsService
         var categories = await _db.Categories.AsNoTracking()
             .Where(c => c.TenantId == tenantId)
             .ToListAsync(ct);
-        var categoryByName = categories.ToDictionary(c => c.Name, c => c.ExternalId, StringComparer.OrdinalIgnoreCase);
+        var categoryByName = categories
+            .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+            .GroupBy(c => c.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().ExternalId, StringComparer.OrdinalIgnoreCase);
 
         return rows.Select(r => EnrichCategoryMetadata(r, categoryByName)).ToList();
     }

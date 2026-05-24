@@ -36,6 +36,7 @@ services:
     restart: unless-stopped
 
   api:
+    image: eduflow-pilot-api:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -51,6 +52,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      DataProtection__KeysPath: /var/lib/eduflow/data-protection-keys
       ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
       ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
       RabbitMq__Host: rabbitmq
@@ -60,9 +62,12 @@ services:
       ErpConnectors__AllowDemoFallback: "false"
     expose:
       - "8080"
+    volumes:
+      - pilot_data_protection_keys:/var/lib/eduflow/data-protection-keys
     restart: unless-stopped
 
   workers:
+    image: eduflow-pilot-workers:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.workers
@@ -78,12 +83,15 @@ services:
     env_file:
       - ${EDUFLOW_ENV_FILE:-deploy/.env.production}
     environment:
+      DataProtection__KeysPath: /var/lib/eduflow/data-protection-keys
       ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
       ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
       RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
       RabbitMq__Password: "${RABBITMQ_PASSWORD}"
+    volumes:
+      - pilot_data_protection_keys:/var/lib/eduflow/data-protection-keys
     restart: unless-stopped
 
   caddy:
@@ -108,3 +116,4 @@ volumes:
   pilot_sql_data:
   pilot_caddy_data:
   pilot_caddy_config:
+  pilot_data_protection_keys:

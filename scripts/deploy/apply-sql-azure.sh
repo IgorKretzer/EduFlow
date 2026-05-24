@@ -26,9 +26,11 @@ if [ -z "$FQDN" ] || [ -z "$USER" ] || [ -z "$PASSWORD" ]; then
   exit 1
 fi
 
-SQLCMD_IMAGE="${EDUFLOW_SQLCMD_IMAGE:-mcr.microsoft.com/mssql-tools18}"
-SQLCMD=(docker run --rm -i "$SQLCMD_IMAGE" /opt/mssql-tools18/bin/sqlcmd
-  -S "tcp:${FQDN},1433" -U "$USER" -P "$PASSWORD" -b -N -l 30)
+# Imagem oficial de ferramentas (não existe mssql-tools18 como imagem separada)
+SQLCMD_IMAGE="${EDUFLOW_SQLCMD_IMAGE:-mcr.microsoft.com/mssql-tools}"
+SQLCMD_BIN="${EDUFLOW_SQLCMD_BIN:-/opt/mssql-tools/bin/sqlcmd}"
+SQLCMD=(docker run --rm -i "$SQLCMD_IMAGE" "$SQLCMD_BIN"
+  -S "tcp:${FQDN},1433" -U "$USER" -P "$PASSWORD" -b -N -C -l 30)
 
 run_sql() {
   local db="$1"
@@ -41,8 +43,11 @@ echo "=== EduFlow — aplicar SQL (Azure) ==="
 echo "Servidor: $FQDN"
 
 echo "Testando conexão (master)..."
-if ! "${SQLCMD[@]}" -d master -Q "SELECT 1" >/dev/null 2>&1; then
-  echo "Falha ao conectar. Verifique firewall do Azure SQL (IP público da VM Oracle) e credenciais."
+if ! "${SQLCMD[@]}" -d master -Q "SELECT 1"; then
+  echo ""
+  echo "Falha ao conectar. Confira:"
+  echo "  - Firewall Azure SQL com IP da VM (curl -s ifconfig.me)"
+  echo "  - AZURE_SQL_FQDN / AZURE_SQL_USER / AZURE_SQL_PASSWORD no .env (senha entre aspas '...')"
   exit 1
 fi
 
@@ -56,10 +61,4 @@ for f in sql/01-pilot-dw-schema.sql sql/02-eduflow-dw-views.sql; do
   fi
 done
 
-for f in sql/08-canonical-unit-code.sql sql/09-finance-payables-categories.sql; do
-  if [ -f "$f" ]; then
-    run_sql EduFlow_Staging "$f" || echo "    (aviso: $f falhou ou já aplicado)"
-  fi
-done
-
-echo "=== SQL Azure concluído ==="
+echo "=== SQL Azure concluído (DW). Scripts 08/09 rodam após EF: apply-sql-staging-post-ef.sh ==="

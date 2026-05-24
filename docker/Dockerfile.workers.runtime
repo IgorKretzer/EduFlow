@@ -1,0 +1,5 @@
+# Imagem leve: exige publish prévio em artifacts/publish/workers.
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY artifacts/publish/workers/ .
+ENTRYPOINT ["dotnet", "EduFlow.Workers.dll"]
