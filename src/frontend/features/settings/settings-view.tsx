@@ -27,8 +27,9 @@ export function SettingsView() {
   const [pageSize, setPageSize] = useState(100);
   const [syncEnabled, setSyncEnabled] = useState(true);
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(15);
-  const [searchStudents, setSearchStudents] = useState("Situacao=2|TOP=5");
-  const [applySearchToAll, setApplySearchToAll] = useState(true);
+  const [searchStudents, setSearchStudents] = useState("Situacao=2|TOP=100");
+  const [searchFinancial, setSearchFinancial] = useState("TOP=100");
+  const [searchContracts, setSearchContracts] = useState("Situacao=2|TOP=100");
   const [lastSync, setLastSync] = useState<ErpConfig | null>(null);
 
   const load = useCallback(async () => {
@@ -51,6 +52,8 @@ export function SettingsView() {
         setSyncEnabled(config.syncEnabled);
         setSyncIntervalMinutes(config.syncIntervalMinutes);
         if (config.searchParametersStudents) setSearchStudents(config.searchParametersStudents);
+        if (config.searchParametersFinancial) setSearchFinancial(config.searchParametersFinancial);
+        if (config.searchParametersContracts) setSearchContracts(config.searchParametersContracts);
       } catch {
         setLastSync(null);
       }
@@ -80,8 +83,8 @@ export function SettingsView() {
         syncEnabled,
         syncIntervalMinutes,
         searchParametersStudents: searchStudents,
-        searchParametersFinancial: applySearchToAll ? searchStudents : undefined,
-        searchParametersContracts: applySearchToAll ? searchStudents : undefined,
+        searchParametersFinancial: searchFinancial,
+        searchParametersContracts: searchContracts,
       });
       setLastSync(saved);
       setPassword("");
@@ -134,9 +137,13 @@ export function SettingsView() {
               if (next === "openapi") {
                 setEndpointUrl(DEFAULT_OPENAPI_ENDPOINT);
                 if (searchStudents.includes("Situacao=")) setSearchStudents("/students?limit=100");
+                if (!searchFinancial.startsWith("/")) setSearchFinancial("/financial?limit=100");
+                if (!searchContracts.startsWith("/")) setSearchContracts("/contracts?limit=100");
               } else {
                 setEndpointUrl(DEFAULT_SPONTE_ENDPOINT);
                 if (searchStudents.startsWith("/")) setSearchStudents("Situacao=2|TOP=100");
+                if (searchFinancial.startsWith("/")) setSearchFinancial("TOP=100");
+                if (searchContracts.startsWith("/")) setSearchContracts("Situacao=2|TOP=100");
               }
             }}
           >
@@ -203,29 +210,45 @@ export function SettingsView() {
         <Field
           label={
             providerKey === "sponte"
-              ? "Filtro de importação (ex.: Situacao=2|TOP=150)"
-              : "Caminho REST — alunos (ex.: /students?limit=150)"
+              ? "Parâmetros — alunos / GetAlunos"
+              : "Caminho REST — alunos"
           }
         >
           <Input
             value={searchStudents}
             onChange={(e) => setSearchStudents(e.target.value)}
             className="font-mono text-xs"
+            placeholder={providerKey === "sponte" ? "Situacao=2|TOP=150" : "/students?limit=150"}
           />
-          <p className="text-xs text-muted-foreground">
-            {providerKey === "sponte"
-              ? "Define quantos registros o Sponte envia por sincronização. Depois de alterar: Salvar e sincronize no painel."
-              : "Caminho relativo à URL base para alunos. Use os mesmos parâmetros abaixo para financeiro e matrículas, se desejar."}
-          </p>
         </Field>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={applySearchToAll}
-            onChange={(e) => setApplySearchToAll(e.target.checked)}
+        <Field
+          label={
+            providerKey === "sponte"
+              ? "Parâmetros — financeiro / GetFinanceiro"
+              : "Caminho REST — financeiro"
+          }
+        >
+          <Input
+            value={searchFinancial}
+            onChange={(e) => setSearchFinancial(e.target.value)}
+            className="font-mono text-xs"
+            placeholder={providerKey === "sponte" ? "TOP=150" : "/financial?limit=150"}
           />
-          Usar os mesmos parâmetros em Alunos, Financeiro e Matrículas
-        </label>
+        </Field>
+        <Field
+          label={
+            providerKey === "sponte"
+              ? "Parâmetros — matrículas / GetMatriculas"
+              : "Caminho REST — matrículas"
+          }
+        >
+          <Input
+            value={searchContracts}
+            onChange={(e) => setSearchContracts(e.target.value)}
+            className="font-mono text-xs"
+            placeholder={providerKey === "sponte" ? "Situacao=2|TOP=150" : "/contracts?limit=150"}
+          />
+        </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={syncEnabled} onChange={(e) => setSyncEnabled(e.target.checked)} />
           Sincronização automática habilitada
