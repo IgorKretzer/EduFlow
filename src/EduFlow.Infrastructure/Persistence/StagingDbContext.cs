@@ -47,6 +47,8 @@ public sealed class StagingDbContext : DbContext
         {
             e.ToTable("CanonicalFinancials");
             e.HasKey(x => x.Id);
+            e.Property(x => x.DebtAmount).HasPrecision(18, 2);
+            e.Property(x => x.PaidAmount).HasPrecision(18, 2);
             e.Property(x => x.UnitCode).HasMaxLength(64);
             e.Property(x => x.FlowDirection).HasMaxLength(16).HasDefaultValue("receivable");
             e.Property(x => x.CategoryId).HasMaxLength(64);
@@ -70,6 +72,7 @@ public sealed class StagingDbContext : DbContext
         {
             e.ToTable("CanonicalContracts");
             e.HasKey(x => x.Id);
+            e.Property(x => x.TotalAmount).HasPrecision(18, 2);
             e.HasIndex(x => new { x.TenantId, x.ExternalId }).IsUnique();
         });
 
@@ -84,6 +87,8 @@ public sealed class StagingDbContext : DbContext
         {
             e.ToTable("FinancialSnapshots");
             e.HasKey(x => x.Id);
+            e.Property(x => x.DebtAmount).HasPrecision(18, 2);
+            e.Property(x => x.PaidAmount).HasPrecision(18, 2);
             e.HasIndex(x => new { x.TenantId, x.ExternalId, x.CapturedAt });
         });
 

@@ -54,6 +54,7 @@ export type DashboardFilter = {
 export type SyncResult = {
   status: string;
   recordsProcessed: number;
+  errorMessage?: string | null;
 };
 
 export type ErpConfig = {

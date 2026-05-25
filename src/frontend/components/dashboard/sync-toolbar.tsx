@@ -27,10 +27,13 @@ export function SyncToolbar({ onSynced }: SyncToolbarProps) {
         contracts: "Matrículas",
       };
       const ok = r.status === "completed";
+      const detail = r.errorMessage ? ` — ${r.errorMessage}` : "";
       setMessage(
-        `${labels[type]}: ${r.recordsProcessed} registro(s) ${ok ? "importados" : `— ${r.status}`}`
+        ok
+          ? `${labels[type]}: ${r.recordsProcessed} registro(s) importados`
+          : `${labels[type]}: ${r.status}${detail}`
       );
-      setTimeout(() => onSynced?.(), 2000);
+      if (ok) setTimeout(() => onSynced?.(), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no sync";
       setMessage(

@@ -4,6 +4,12 @@ obj/
 
 .vs/
 
+artifacts/
+
+*.tgz
+
+*.zip
+
 *.user
 
 *.suo

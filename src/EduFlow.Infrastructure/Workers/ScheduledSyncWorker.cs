@@ -36,10 +36,12 @@ public sealed class ScheduledSyncWorker : BackgroundService
             return;
         }
 
+        var entityTypes = ResolveEntityTypes();
+
         _logger.LogInformation(
             "ScheduledSyncWorker ativo. Poll={Poll}s Entidades={Entities}",
             _settings.PollIntervalSeconds,
-            string.Join(", ", _settings.EntityTypes));
+            string.Join(", ", entityTypes));
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -82,7 +84,7 @@ public sealed class ScheduledSyncWorker : BackgroundService
             var errors = new List<string>();
             var total = 0;
 
-            foreach (var entityType in _settings.EntityTypes)
+            foreach (var entityType in ResolveEntityTypes())
             {
                 var result = await sync.TriggerSyncAsync(
                     config.TenantId,
@@ -106,4 +108,11 @@ public sealed class ScheduledSyncWorker : BackgroundService
                 config.TenantId, status, total);
         }
     }
+
+    private string[] ResolveEntityTypes() =>
+        _settings.EntityTypes
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Select(e => e.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 }

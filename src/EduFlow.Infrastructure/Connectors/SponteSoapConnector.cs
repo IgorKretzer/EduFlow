@@ -154,7 +154,8 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
                     return BuildDemoBatch(entityType, demoFactory, demoCount);
                 }
 
-                return [];
+                throw new InvalidOperationException(
+                    $"Sponte {soapAction} retornou HTTP {(int)response.StatusCode}. Verifique token, código cliente e parâmetros de busca.");
             }
 
 
@@ -187,7 +188,7 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
 
 
 
-            return [];
+            throw new InvalidOperationException("Sponte indisponível em GetCategorias. Tente novamente em instantes.");
 
         }
 
@@ -198,7 +199,8 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
             _logger.LogWarning(ex, "Sponte indisponível ({Action}).", soapAction);
 
             if (!_settings.AllowDemoFallback)
-                return [];
+                throw new InvalidOperationException(
+                    $"Sponte indisponível em {soapAction}. Tente novamente em instantes.");
 
             var demoCount = SponteSearchParams.ResolveRecordLimit(searchParams, context.PageSize);
             return BuildDemoBatch(entityType, demoFactory, demoCount);
@@ -456,7 +458,8 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("GetCategorias HTTP {Status}", (int)response.StatusCode);
-                return [];
+                throw new InvalidOperationException(
+                    $"Sponte GetCategorias retornou HTTP {(int)response.StatusCode}.");
             }
 
             var items = SponteXmlParser.ParseResponse(xml, "category");
