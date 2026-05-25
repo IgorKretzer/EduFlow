@@ -212,34 +212,14 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
 
 
     private static string ResolveSearchParameters(string soapAction, ErpSyncContext ctx) =>
-
-        soapAction switch
-
+        (soapAction switch
         {
-
-            "GetAlunos" => ctx.SearchParametersStudents
-
-                               ?? $"Situacao=2|TOP={Math.Max(1, ctx.PageSize)}",
-
-            "GetFinanceiro" => ctx.SearchParametersFinancial
-
-                                 ?? $"Situacao=2|TOP={Math.Max(1, ctx.PageSize)}",
-
-            "GetParcelasPagar" => ctx.SearchParametersPayables
-
-                                   ?? ctx.SearchParametersFinancial
-
-                                   ?? $"TOP={Math.Max(1, ctx.PageSize)}",
-
-            "GetMatriculas" => ctx.SearchParametersContracts
-
-                                 ?? $"Situacao=2|TOP={Math.Max(1, ctx.PageSize)}",
-
-            _ => $"TOP={Math.Max(1, ctx.PageSize)}"
-
-        };
-
-
+            "GetAlunos" => ctx.SearchParametersStudents,
+            "GetFinanceiro" => ctx.SearchParametersFinancial,
+            "GetParcelasPagar" => ctx.SearchParametersPayables ?? ctx.SearchParametersFinancial,
+            "GetMatriculas" => ctx.SearchParametersContracts,
+            _ => null
+        }) ?? "";
 
     private static string BuildSoapEnvelope(string action, ErpSyncContext ctx, string searchParams)
 

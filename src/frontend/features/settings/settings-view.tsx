@@ -147,7 +147,7 @@ export function SettingsView() {
               }
             }}
           >
-            <option value="sponte">Sponte (SOAP)</option>
+            <option value="soap">SOAP</option>
             <option value="openapi">API REST / OpenAPI</option>
           </select>
         </Field>
