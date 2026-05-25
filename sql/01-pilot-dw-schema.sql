@@ -45,6 +45,7 @@ CREATE TABLE dw.FactFinanceiro (
     EnrollmentCode NVARCHAR(64) NOT NULL,
     DebtAmount DECIMAL(18,2) NOT NULL,
     PaidAmount DECIMAL(18,2) NOT NULL,
+    InterestAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_FactFinanceiro_InterestAmount DEFAULT 0,
     PaymentStatus NVARCHAR(32) NOT NULL,
     IsOverdue BIT NOT NULL
 );

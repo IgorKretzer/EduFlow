@@ -14,6 +14,7 @@ public sealed record CanonicalFinancial
     public string UnitCode { get; init; } = "";
     public decimal DebtAmount { get; init; }
     public decimal PaidAmount { get; init; }
+    public decimal InterestAmount { get; init; }
     public string PaymentStatus { get; init; } = "pending";
     public DateOnly DueDate { get; init; }
     /// <summary>receivable (Contas a receber) ou payable (Contas a pagar).</summary>

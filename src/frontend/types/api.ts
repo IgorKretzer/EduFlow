@@ -156,6 +156,7 @@ export type FinanceReceivablesSummary = {
   toReceive: number;
   totalPaid: number;
   totalInvoice: number;
+  totalInterest: number;
   peopleCount: number;
   overdueShare: number;
   toReceiveShare: number;
@@ -191,6 +192,7 @@ export type FinanceCashFlowSummary = {
   totalOutflow: number;
   closingBalance: number;
   delinquencyRatePct: number;
+  totalInterest: number;
   inflowShare: number;
   outflowShare: number;
   inflowBreakdown: FinanceBreakdown[];
@@ -200,4 +202,87 @@ export type FinanceCashFlowSummary = {
 export type FinanceCashFlow = {
   summary: FinanceCashFlowSummary;
   days: FinanceCashFlowDay[];
+};
+
+export type FinancePulseMetric = {
+  key: string;
+  label: string;
+  value: number;
+  format: string;
+  previousValue?: number | null;
+  changePercent?: number | null;
+  tone: string;
+  hint: string;
+};
+
+export type FinancePulseSignal = {
+  code: string;
+  title: string;
+  message: string;
+  severity: string;
+  metricKey: string;
+  recommendedAction: string;
+  deepLink: string;
+};
+
+export type FinancePulseCalendarDay = {
+  date: string;
+  day: number;
+  expectedInflow: number;
+  realizedInflow: number;
+  expectedOutflow: number;
+  realizedOutflow: number;
+  projectedBalance: number;
+  overdueAmount: number;
+  status: string;
+};
+
+export type FinanceStatementLine = {
+  key: string;
+  label: string;
+  amount: number;
+  kind: string;
+  order: number;
+};
+
+export type FinancePulseGoal = {
+  key: string;
+  label: string;
+  targetAmount?: number | null;
+  actualAmount: number;
+  progressPercent?: number | null;
+  source: string;
+};
+
+export type FinanceGoal = {
+  id: string;
+  unitId?: string | null;
+  year: number;
+  month: number;
+  key: string;
+  label: string;
+  targetAmount: number;
+  updatedAtUtc: string;
+};
+
+export type UpsertFinanceGoalRequest = {
+  unitId?: string | null;
+  year: number;
+  month: number;
+  label: string;
+  targetAmount: number;
+};
+
+export type FinancePulse = {
+  year: number;
+  month: number;
+  dataBasis: "cash" | "due" | "competence" | string;
+  healthStatus: string;
+  healthMessage: string;
+  metrics: FinancePulseMetric[];
+  signals: FinancePulseSignal[];
+  calendar: FinancePulseCalendarDay[];
+  statement: FinanceStatementLine[];
+  goals: FinancePulseGoal[];
+  gaps: string[];
 };

@@ -17,6 +17,7 @@ public sealed class StagingDbContext : DbContext
     public DbSet<TenantErpConfigEntity> ErpConfigs => Set<TenantErpConfigEntity>();
     public DbSet<StudentSnapshot> StudentSnapshots => Set<StudentSnapshot>();
     public DbSet<FinancialSnapshot> FinancialSnapshots => Set<FinancialSnapshot>();
+    public DbSet<FinanceGoalEntity> FinanceGoals => Set<FinanceGoalEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +50,7 @@ public sealed class StagingDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.DebtAmount).HasPrecision(18, 2);
             e.Property(x => x.PaidAmount).HasPrecision(18, 2);
+            e.Property(x => x.InterestAmount).HasPrecision(18, 2);
             e.Property(x => x.UnitCode).HasMaxLength(64);
             e.Property(x => x.FlowDirection).HasMaxLength(16).HasDefaultValue("receivable");
             e.Property(x => x.CategoryId).HasMaxLength(64);
@@ -90,6 +92,16 @@ public sealed class StagingDbContext : DbContext
             e.Property(x => x.DebtAmount).HasPrecision(18, 2);
             e.Property(x => x.PaidAmount).HasPrecision(18, 2);
             e.HasIndex(x => new { x.TenantId, x.ExternalId, x.CapturedAt });
+        });
+
+        modelBuilder.Entity<FinanceGoalEntity>(e =>
+        {
+            e.ToTable("FinanceGoals");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Key).HasMaxLength(64);
+            e.Property(x => x.Label).HasMaxLength(160);
+            e.Property(x => x.TargetAmount).HasPrecision(18, 2);
+            e.HasIndex(x => new { x.TenantId, x.UnitId, x.Year, x.Month, x.Key }).IsUnique();
         });
 
         modelBuilder.Entity<TenantUser>(e =>
@@ -155,4 +167,18 @@ public sealed class TenantErpConfigEntity
     public string? SearchParametersStudents { get; set; }
     public string? SearchParametersFinancial { get; set; }
     public string? SearchParametersContracts { get; set; }
+}
+
+public sealed class FinanceGoalEntity
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid? UnitId { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public required string Key { get; set; }
+    public required string Label { get; set; }
+    public decimal TargetAmount { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
 }

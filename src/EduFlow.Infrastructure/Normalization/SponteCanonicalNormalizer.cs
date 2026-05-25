@@ -59,6 +59,7 @@ public sealed class SponteCanonicalNormalizer : ICanonicalNormalizer
 
         var valorParcela = ParseDecimal(SponteXmlParser.Child(parcela, "ValorParcela")) ?? 0m;
         var valorPago = ParseDecimal(SponteXmlParser.Child(parcela, "ValorPago")) ?? 0m;
+        var juros = ParseInterestAmount(parcela);
         var situacao = SponteXmlParser.Child(parcela, "SituacaoParcela");
         var debt = CalculateDebt(valorParcela, valorPago, situacao);
 
@@ -83,6 +84,7 @@ public sealed class SponteCanonicalNormalizer : ICanonicalNormalizer
             UnitCode = unitCode,
             DebtAmount = debt,
             PaidAmount = valorPago,
+            InterestAmount = juros,
             PaymentStatus = MapParcelStatus(situacao, debt),
             DueDate = dueDate,
             FlowDirection = FinancialFlowDirection.Receivable,
@@ -111,6 +113,7 @@ public sealed class SponteCanonicalNormalizer : ICanonicalNormalizer
 
         var valorParcela = ParseDecimal(SponteXmlParser.Child(parcela, "ValorParcela")) ?? 0m;
         var valorPago = ParseDecimal(SponteXmlParser.Child(parcela, "ValorPago")) ?? 0m;
+        var juros = ParseInterestAmount(parcela);
         var situacao = SponteXmlParser.Child(parcela, "SituacaoParcela");
         var debt = CalculateDebt(valorParcela, valorPago, situacao);
 
@@ -131,6 +134,7 @@ public sealed class SponteCanonicalNormalizer : ICanonicalNormalizer
             UnitId = Guid.Empty,
             DebtAmount = debt,
             PaidAmount = valorPago,
+            InterestAmount = juros,
             PaymentStatus = MapParcelStatus(situacao, debt),
             DueDate = dueDate,
             FlowDirection = FinancialFlowDirection.Payable,
@@ -258,6 +262,21 @@ public sealed class SponteCanonicalNormalizer : ICanonicalNormalizer
             return 0;
 
         return remaining;
+    }
+
+    private static decimal ParseInterestAmount(XElement parcela)
+    {
+        var value = FirstNonEmpty(
+            SponteXmlParser.Child(parcela, "ValorJuros"),
+            SponteXmlParser.Child(parcela, "Juros"),
+            SponteXmlParser.Child(parcela, "ValorMulta"),
+            SponteXmlParser.Child(parcela, "Multa"),
+            SponteXmlParser.Child(parcela, "Acrescimo"),
+            SponteXmlParser.Child(parcela, "ValorAcrescimo"),
+            SponteXmlParser.Child(parcela, "Mora"),
+            SponteXmlParser.Child(parcela, "ValorMora"));
+
+        return ParseDecimal(value) ?? 0m;
     }
 
     private static Guid ToDeterministicGuid(string key)

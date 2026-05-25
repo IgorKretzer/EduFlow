@@ -48,6 +48,17 @@ FROM (
     UNION ALL
 
     SELECT
+        f.TenantId,
+        'interest_total',
+        N'Juros atribuídos',
+        ISNULL(SUM(f.InterestAmount), 0),
+        NULL, NULL, 'currency'
+    FROM dw.FactFinanceiro f
+    GROUP BY f.TenantId
+
+    UNION ALL
+
+    SELECT
         a.TenantId,
         'active_students',
         N'Alunos ativos',

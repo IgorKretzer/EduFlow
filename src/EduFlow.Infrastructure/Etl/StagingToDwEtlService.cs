@@ -238,9 +238,9 @@ public sealed class StagingToDwEtlService : IEtlService
 
             await conn.ExecuteAsync("""
                 INSERT INTO dw.FactFinanceiro
-                    (TenantId, DateKey, UnitKey, EnrollmentCode, DebtAmount, PaidAmount, PaymentStatus, IsOverdue)
+                    (TenantId, DateKey, UnitKey, EnrollmentCode, DebtAmount, PaidAmount, InterestAmount, PaymentStatus, IsOverdue)
                 VALUES
-                    (@TenantId, @DateKey, @UnitKey, @EnrollmentCode, @DebtAmount, @PaidAmount, @PaymentStatus, @IsOverdue)
+                    (@TenantId, @DateKey, @UnitKey, @EnrollmentCode, @DebtAmount, @PaidAmount, @InterestAmount, @PaymentStatus, @IsOverdue)
                 """, new
             {
                 TenantId = tenantId,
@@ -249,6 +249,7 @@ public sealed class StagingToDwEtlService : IEtlService
                 f.EnrollmentCode,
                 f.DebtAmount,
                 f.PaidAmount,
+                f.InterestAmount,
                 f.PaymentStatus,
                 IsOverdue = isOverdue ? 1 : 0
             }, tx);

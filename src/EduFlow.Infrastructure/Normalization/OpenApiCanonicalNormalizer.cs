@@ -55,6 +55,17 @@ public sealed class OpenApiCanonicalNormalizer
         var unitCode = PickString(el, "unitCode", "codigoUnidade", "CodigoUnidade") ?? "";
         var debt = PickDecimal(el, "debtAmount", "valorEmAberto", "remainingAmount") ?? 0m;
         var paid = PickDecimal(el, "paidAmount", "valorPago", "ValorPago") ?? 0m;
+        var interest = PickDecimal(
+            el,
+            "interestAmount",
+            "valorJuros",
+            "ValorJuros",
+            "juros",
+            "Juros",
+            "valorMulta",
+            "ValorMulta",
+            "multa",
+            "Multa") ?? 0m;
         var status = PickString(el, "paymentStatus", "situacaoParcela", "status");
 
         if (debt <= 0 && paid > 0)
@@ -78,6 +89,7 @@ public sealed class OpenApiCanonicalNormalizer
             UnitCode = unitCode,
             DebtAmount = debt,
             PaidAmount = paid,
+            InterestAmount = interest,
             PaymentStatus = MapParcelStatus(status, debt),
             DueDate = dueDate,
             FlowDirection = direction.Contains("pay", StringComparison.OrdinalIgnoreCase)
