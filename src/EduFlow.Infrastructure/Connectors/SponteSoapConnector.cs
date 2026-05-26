@@ -265,7 +265,7 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
 
             </soap:Envelope>
 
-            """;
+            """.Trim();
 
     }
 
@@ -391,7 +391,7 @@ public sealed class SponteSoapConnector : IErpExtendedConnector
 
             </wsFinanceiro>
 
-            """;
+            """.Trim();
 
     }
 
