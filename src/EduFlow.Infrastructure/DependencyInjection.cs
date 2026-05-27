@@ -34,6 +34,8 @@ public static class DependencyInjection
         services.Configure<OpsSettings>(configuration.GetSection(OpsSettings.SectionName));
         services.Configure<ErpConnectorSettings>(
             configuration.GetSection(ErpConnectorSettings.SectionName));
+        services.Configure<WorkerRuntimeSettings>(
+            configuration.GetSection(WorkerRuntimeSettings.SectionName));
 
         services.AddHttpClient("ops-probe", client =>
         {
@@ -82,11 +84,20 @@ public static class DependencyInjection
 
         if (registerWorkers)
         {
-            services.AddHostedService<IngestionWorker>();
-            services.AddHostedService<SnapshotWorker>();
-            services.AddHostedService<TransformWorker>();
-            services.AddHostedService<AnalyticsWorker>();
-            services.AddHostedService<ScheduledSyncWorker>();
+            var workers = configuration
+                .GetSection(WorkerRuntimeSettings.SectionName)
+                .Get<WorkerRuntimeSettings>() ?? new WorkerRuntimeSettings();
+
+            if (workers.EnableStudents)
+                services.AddHostedService<IngestionWorker>();
+            if (workers.EnableFinancial)
+                services.AddHostedService<SnapshotWorker>();
+            if (workers.EnableContracts)
+                services.AddHostedService<TransformWorker>();
+            if (workers.EnableAnalytics)
+                services.AddHostedService<AnalyticsWorker>();
+            if (workers.EnableScheduler)
+                services.AddHostedService<ScheduledSyncWorker>();
         }
 
         return services;

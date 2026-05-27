@@ -1,0 +1,27 @@
+# VM RabbitMQ: mensageria isolada. Libere 5672 apenas para as VMs API/Workers.
+# Uso:
+#   docker compose -f docker-compose.rabbitmq.yml --env-file deploy/.env.production up -d rabbitmq
+name: eduflow-rabbitmq
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: eduflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:-eduflow}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD}"
+    ports:
+      - "${RABBITMQ_BIND_IP:-0.0.0.0}:5672:5672"
+      # Management UI: prefira SSH tunnel/VPN. Nao exponha publicamente sem restricao de origem.
+      - "${RABBITMQ_MANAGEMENT_BIND_IP:-127.0.0.1}:15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:

@@ -2,20 +2,31 @@ name: Deploy Backend Oracle
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/EduFlow.Api/**"
-      - "src/EduFlow.Application/**"
-      - "src/EduFlow.Domain/**"
-      - "src/EduFlow.Infrastructure/**"
-      - "src/EduFlow.Analytics/**"
-      - "src/EduFlow.Workers/**"
-      - "docker/**"
-      - "docker-compose.pilot.yml"
-      - "deploy/Caddyfile"
-      - ".github/workflows/deploy-backend-oracle.yml"
+    inputs:
+      deploy_rabbitmq:
+        description: "Deploy RabbitMQ VM"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      deploy_api:
+        description: "Deploy API VM"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      deploy_workers:
+        description: "Deploy Workers VM"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 concurrency:
   group: deploy-backend-oracle
@@ -25,13 +36,16 @@ jobs:
   deploy:
     name: Build and deploy backend
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     env:
-      ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+      ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
       ORACLE_PORT: ${{ secrets.ORACLE_PORT }}
       ORACLE_USER: ${{ secrets.ORACLE_USER }}
       ORACLE_APP_DIR: ${{ secrets.ORACLE_APP_DIR }}
+      ORACLE_API_HOST: ${{ secrets.ORACLE_API_HOST }}
+      ORACLE_WORKERS_HOST: ${{ secrets.ORACLE_WORKERS_HOST }}
+      ORACLE_RABBITMQ_HOST: ${{ secrets.ORACLE_RABBITMQ_HOST }}
       API_HEALTH_URL: ${{ secrets.API_HEALTH_URL }}
 
     steps:
@@ -63,60 +77,107 @@ jobs:
       - name: Configure SSH
         run: |
           set -euo pipefail
-          test -n "${{ secrets.ORACLE_SSH_KEY }}" || (echo "Missing secret ORACLE_SSH_KEY" && exit 1)
+          test -n "$ORACLE_SSH_KEY" || (echo "Missing secret ORACLE_SSH_KEY" && exit 1)
+          test -n "$ORACLE_API_HOST" || (echo "Missing secret ORACLE_API_HOST" && exit 1)
 
-          echo "DEPLOY_HOST=${ORACLE_HOST:-163.176.225.154}" >> "$GITHUB_ENV"
-          echo "DEPLOY_PORT=${ORACLE_PORT:-22}" >> "$GITHUB_ENV"
-          echo "DEPLOY_USER=${ORACLE_USER:-ubuntu}" >> "$GITHUB_ENV"
-          echo "DEPLOY_APP_DIR=${ORACLE_APP_DIR:-/home/ubuntu/EduFlow}" >> "$GITHUB_ENV"
-          echo "DEPLOY_HEALTH_URL=${API_HEALTH_URL:-https://edu-flow-api.duckdns.org/health/live}" >> "$GITHUB_ENV"
+          {
+            echo "DEPLOY_PORT=${ORACLE_PORT:-22}"
+            echo "DEPLOY_USER=${ORACLE_USER:-ubuntu}"
+            echo "DEPLOY_APP_DIR=${ORACLE_APP_DIR:-/home/ubuntu/EduFlow}"
+            echo "DEPLOY_API_HOST=$ORACLE_API_HOST"
+            echo "DEPLOY_WORKERS_HOST=${ORACLE_WORKERS_HOST:-$ORACLE_API_HOST}"
+            echo "DEPLOY_RABBITMQ_HOST=${ORACLE_RABBITMQ_HOST:-}"
+            echo "DEPLOY_HEALTH_URL=${API_HEALTH_URL:-https://edu-flow-api.duckdns.org/health/live}"
+          } >> "$GITHUB_ENV"
 
           install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+          printf '%s\n' "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
           chmod 600 ~/.ssh/oracle_key
-          ssh-keyscan -p "${ORACLE_PORT:-22}" "${ORACLE_HOST:-163.176.225.154}" >> ~/.ssh/known_hosts
 
-      - name: Upload artifacts to Oracle
+          ssh-keyscan -p "${ORACLE_PORT:-22}" "$ORACLE_API_HOST" >> ~/.ssh/known_hosts
+          if [ -n "${ORACLE_WORKERS_HOST:-}" ] && [ "$ORACLE_WORKERS_HOST" != "$ORACLE_API_HOST" ]; then
+            ssh-keyscan -p "${ORACLE_PORT:-22}" "$ORACLE_WORKERS_HOST" >> ~/.ssh/known_hosts
+          fi
+          if [ -n "${ORACLE_RABBITMQ_HOST:-}" ]; then
+            ssh-keyscan -p "${ORACLE_PORT:-22}" "$ORACLE_RABBITMQ_HOST" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Deploy RabbitMQ VM
+        if: ${{ inputs.deploy_rabbitmq == 'true' }}
         run: |
           set -euo pipefail
-          scp -P "$DEPLOY_PORT" -i ~/.ssh/oracle_key api-publish.tgz "$DEPLOY_USER@$DEPLOY_HOST:~/api-publish.tgz"
-          scp -P "$DEPLOY_PORT" -i ~/.ssh/oracle_key workers-publish.tgz "$DEPLOY_USER@$DEPLOY_HOST:~/workers-publish.tgz"
-
-      - name: Deploy containers
-        run: |
-          set -euo pipefail
-          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_HOST" "
+          test -n "$DEPLOY_RABBITMQ_HOST" || (echo "Missing secret ORACLE_RABBITMQ_HOST" && exit 1)
+          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_RABBITMQ_HOST" "
             set -euo pipefail
             cd '$DEPLOY_APP_DIR'
             git fetch origin main
             git reset --hard origin/main
-            rm -rf artifacts/publish/api artifacts/publish/workers
-            mkdir -p artifacts/publish/api artifacts/publish/workers
-            tar -xzf ~/api-publish.tgz -C artifacts/publish/api
-            tar -xzf ~/workers-publish.tgz -C artifacts/publish/workers
-            test -f artifacts/publish/api/EduFlow.Api.dll
-            test -f artifacts/publish/workers/EduFlow.Workers.dll
-            docker build --no-cache -f docker/Dockerfile.api.runtime -t eduflow-pilot-api:latest .
-            docker build --no-cache -f docker/Dockerfile.workers.runtime -t eduflow-pilot-workers:latest .
-            export EDUFLOW_ENV_FILE=deploy/.env.production
-            docker compose -f docker-compose.pilot.yml --env-file deploy/.env.production up -d rabbitmq api workers caddy --no-build
-            docker compose -f docker-compose.pilot.yml --env-file deploy/.env.production ps
+            docker compose -f docker-compose.rabbitmq.yml --env-file deploy/.env.production up -d rabbitmq
+            docker compose -f docker-compose.rabbitmq.yml --env-file deploy/.env.production ps
           "
 
-      - name: Validate health
+      - name: Upload API artifact
+        if: ${{ inputs.deploy_api == 'true' }}
+        run: |
+          scp -P "$DEPLOY_PORT" -i ~/.ssh/oracle_key api-publish.tgz "$DEPLOY_USER@$DEPLOY_API_HOST:~/api-publish.tgz"
+
+      - name: Deploy API VM
+        if: ${{ inputs.deploy_api == 'true' }}
         run: |
           set -euo pipefail
-          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_HOST" "
+          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_API_HOST" "
+            set -euo pipefail
+            cd '$DEPLOY_APP_DIR'
+            git fetch origin main
+            git reset --hard origin/main
+            rm -rf artifacts/publish/api
+            mkdir -p artifacts/publish/api
+            tar -xzf ~/api-publish.tgz -C artifacts/publish/api
+            test -f artifacts/publish/api/EduFlow.Api.dll
+            docker build --no-cache -f docker/Dockerfile.api.runtime -t eduflow-pilot-api:latest .
+            export EDUFLOW_ENV_FILE=deploy/.env.production
+            docker compose -f docker-compose.api.yml --env-file deploy/.env.production up -d api caddy --no-build
+            docker compose -f docker-compose.api.yml --env-file deploy/.env.production ps
+          "
+
+      - name: Upload Workers artifact
+        if: ${{ inputs.deploy_workers == 'true' }}
+        run: |
+          scp -P "$DEPLOY_PORT" -i ~/.ssh/oracle_key workers-publish.tgz "$DEPLOY_USER@$DEPLOY_WORKERS_HOST:~/workers-publish.tgz"
+
+      - name: Deploy Workers VM
+        if: ${{ inputs.deploy_workers == 'true' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_WORKERS_HOST" "
+            set -euo pipefail
+            cd '$DEPLOY_APP_DIR'
+            git fetch origin main
+            git reset --hard origin/main
+            rm -rf artifacts/publish/workers
+            mkdir -p artifacts/publish/workers
+            tar -xzf ~/workers-publish.tgz -C artifacts/publish/workers
+            test -f artifacts/publish/workers/EduFlow.Workers.dll
+            docker build --no-cache -f docker/Dockerfile.workers.runtime -t eduflow-pilot-workers:latest .
+            export EDUFLOW_ENV_FILE=deploy/.env.production
+            docker compose -f docker-compose.workers.yml --env-file deploy/.env.production up -d workers --no-build
+            docker compose -f docker-compose.workers.yml --env-file deploy/.env.production ps
+          "
+
+      - name: Validate API health
+        if: ${{ inputs.deploy_api == 'true' }}
+        run: |
+          set -euo pipefail
+          ssh -p "$DEPLOY_PORT" -i ~/.ssh/oracle_key "$DEPLOY_USER@$DEPLOY_API_HOST" "
             set -euo pipefail
             cd '$DEPLOY_APP_DIR'
             for attempt in \$(seq 1 18); do
-              if docker inspect --format='{{json .State.Health.Status}}' eduflow-pilot-api | grep -q healthy; then
+              if docker inspect --format='{{json .State.Health.Status}}' eduflow-api | grep -q healthy; then
                 break
               fi
               sleep 5
             done
-            docker inspect --format='{{json .State.Health.Status}}' eduflow-pilot-api | grep -q healthy
+            docker inspect --format='{{json .State.Health.Status}}' eduflow-api | grep -q healthy
             curl -kfsS '$DEPLOY_HEALTH_URL'
-            docker compose -f docker-compose.pilot.yml --env-file deploy/.env.production logs --tail=80 api
-            docker compose -f docker-compose.pilot.yml --env-file deploy/.env.production logs --tail=60 workers
+            docker compose -f docker-compose.api.yml --env-file deploy/.env.production logs --tail=80 api
           "

@@ -1,0 +1,35 @@
+# VM Workers: processamento assíncrono e sincronização ERP.
+# Uso:
+#   export EDUFLOW_ENV_FILE=deploy/.env.production
+#   docker compose -f docker-compose.workers.yml --env-file deploy/.env.production up -d workers
+name: eduflow-workers
+
+services:
+  workers:
+    image: eduflow-pilot-workers:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.workers.runtime
+    container_name: eduflow-workers
+    env_file:
+      - ${EDUFLOW_ENV_FILE:-deploy/.env.production}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DataProtection__KeysPath: /var/lib/eduflow/data-protection-keys
+      ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
+      ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
+      RabbitMq__Host: "${RABBITMQ_HOST:?Defina RABBITMQ_HOST com o IP privado da VM RabbitMQ}"
+      RabbitMq__Port: "${RABBITMQ_PORT:-5672}"
+      RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD}"
+      Workers__EnableStudents: "${WORKERS_ENABLE_STUDENTS:-true}"
+      Workers__EnableFinancial: "${WORKERS_ENABLE_FINANCIAL:-true}"
+      Workers__EnableContracts: "${WORKERS_ENABLE_CONTRACTS:-true}"
+      Workers__EnableAnalytics: "${WORKERS_ENABLE_ANALYTICS:-true}"
+      Workers__EnableScheduler: "${WORKERS_ENABLE_SCHEDULER:-true}"
+    volumes:
+      - workers_data_protection_keys:/var/lib/eduflow/data-protection-keys
+    restart: unless-stopped
+
+volumes:
+  workers_data_protection_keys:

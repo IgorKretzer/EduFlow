@@ -1,0 +1,54 @@
+# VM API: publica HTTPS e API. Use quando RabbitMQ estiver em outra VM.
+# Uso:
+#   export EDUFLOW_ENV_FILE=deploy/.env.production
+#   docker compose -f docker-compose.api.yml --env-file deploy/.env.production up -d api caddy
+name: eduflow-api
+
+services:
+  api:
+    image: eduflow-pilot-api:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api.runtime
+    container_name: eduflow-api
+    env_file:
+      - ${EDUFLOW_ENV_FILE:-deploy/.env.production}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DataProtection__KeysPath: /var/lib/eduflow/data-protection-keys
+      ConnectionStrings__Staging: "${ConnectionStrings__Staging:?Defina ConnectionStrings__Staging no env}"
+      ConnectionStrings__Warehouse: "${ConnectionStrings__Warehouse:?Defina ConnectionStrings__Warehouse no env}"
+      RabbitMq__Host: "${RABBITMQ_HOST:?Defina RABBITMQ_HOST com o IP privado da VM RabbitMQ}"
+      RabbitMq__Port: "${RABBITMQ_PORT:-5672}"
+      RabbitMq__Username: "${RABBITMQ_USER:-eduflow}"
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD}"
+      ErpConnectors__AllowDemoFallback: "false"
+    expose:
+      - "8080"
+    volumes:
+      - api_data_protection_keys:/var/lib/eduflow/data-protection-keys
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: eduflow-api-caddy
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_UPSTREAM: api:8080
+      ACME_EMAIL: "${ACME_EMAIL:-}"
+      API_DOMAIN: "${API_DOMAIN:-}"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - api_caddy_data:/data
+      - api_caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  api_caddy_data:
+  api_caddy_config:
+  api_data_protection_keys:
